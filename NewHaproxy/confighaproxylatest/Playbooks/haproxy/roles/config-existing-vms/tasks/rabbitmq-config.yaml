@@ -1,0 +1,59 @@
+---
+- name: Ensures dir exists
+  file: path=/etc/haproxy.d/  state=directory
+
+- name: generate haproxy.cfg file
+  template:
+    src: rabbitmq.cfg.j2
+    dest: "/etc/haproxy.d/rabbitmq.cfg"
+    force: true
+  when: rabbitmq_name != 'green' and rabbitmq_name != 'blue'
+
+- name: generate haproxy.cfg file for green
+  template:
+    src: rabbitmq-green.cfg.j2
+    dest: "/etc/haproxy.d/rabbitmq-green.cfg"
+    force: true
+  when: rabbitmq_name == 'green'
+
+- name: generate haproxy.cfg file for blue
+  template:
+    src: rabbitmq-blue.cfg.j2
+    dest: "/etc/haproxy.d/rabbitmq-blue.cfg"
+    force: true
+  when: rabbitmq_name == 'blue'
+
+- name: generate option file for dev
+  shell: |
+    opt=$(cat /etc/sysconfig/haproxy | awk -F"=" '{print $2}' | tr -d '"');
+    if [[ ${opt} != *"rabbitmq.cfg"* ]]; then
+       opt="${opt} -f /etc/haproxy.d/rabbitmq.cfg"
+       echo OPTIONS=\""${opt}"\" > /etc/sysconfig/haproxy
+    fi
+  when: rabbitmq_name != 'green' and rabbitmq_name != 'blue'
+
+- name: generate option file for green
+  shell: |
+    opt=$(cat /etc/sysconfig/haproxy | awk -F"=" '{print $2}' | tr -d '"');
+    if [[ ${opt} != *"rabbitmq-green"* ]]; then
+       opt="${opt} -f /etc/haproxy.d/rabbitmq-green.cfg"
+       echo OPTIONS=\""${opt}"\" > /etc/sysconfig/haproxy
+    fi
+  when: rabbitmq_name == 'green'
+
+
+- name: generate option file for blue
+  shell: |
+    opt=$(cat /etc/sysconfig/haproxy | awk -F"=" '{print $2}' | tr -d '"');
+    if [[ ${opt} != *"rabbitmq-blue"* ]]; then
+       opt="${opt} -f /etc/haproxy.d/rabbitmq-blue.cfg"
+       echo OPTIONS=\""${opt}"\" > /etc/sysconfig/haproxy
+    fi
+  when: rabbitmq_name == 'blue'
+
+
+- name: reload haproxy service
+  systemd:
+    state: restarted
+    name: haproxy
+    enabled: yes

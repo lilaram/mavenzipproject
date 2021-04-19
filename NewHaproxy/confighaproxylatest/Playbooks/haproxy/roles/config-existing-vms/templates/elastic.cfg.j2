@@ -1,0 +1,23 @@
+frontend elastic-logging-northboand-9203
+    bind *:9203
+    mode tcp
+    option tcplog
+    option tcpka
+    timeout client 60m
+    timeout http-keep-alive 1m
+    default_backend elastic-logging-backend-9203
+
+backend elastic-logging-backend-9203
+     mode tcp
+     #option tcp-check connect
+     option tcplog
+     #tcp-check send PING\r\n
+     #tcp-check expect string +PONG
+     balance roundrobin
+{% for key in services %}
+    {% if "es_logging" in key %}
+     server {{ services[key]['host'] }} {{ services[key]['ip'] }}:9200 check
+    {% endif %}
+{% endfor %}
+
+

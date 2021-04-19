@@ -1,0 +1,29 @@
+---
+- name: Set configuration template
+  template:
+    src: "patroni.cfg"
+    dest: "/etc/haproxy/haproxy.cfg"
+  notify: restart haproxy
+
+- name: Copy rsyslog.conf in place.
+  copy:
+    src: "rsyslog.conf"
+    dest: "/etc/rsyslog.conf"
+    mode: 0644
+
+- name: Enable haproxy service
+  service:
+    name: haproxy
+    enabled: yes
+
+- name: rsyslog restart service
+  systemd:
+    state: restarted
+    name: rsyslog
+    enabled: yes
+  notify: restart haproxy
+
+- name: Wait for haproxy service to be ready
+  wait_for:
+    timeout: 30
+  delegate_to: localhost

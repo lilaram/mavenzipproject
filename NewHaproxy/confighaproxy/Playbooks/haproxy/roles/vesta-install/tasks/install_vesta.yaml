@@ -1,0 +1,80 @@
+---
+- debug:
+    msg: Start of Vesta server installation
+
+- name: download vesta CP installer
+  get_url: url=http://vestacp.com/pub/vst-install-rhel.sh dest=/tmp/vst-install-rhel.sh mode=0400
+
+- name: Clean yum metadata
+  command: yum clean all
+  args:
+    warn: no
+
+- name: ensure a list of packages installed ( lsb_release )
+  yum:
+    name: "{{ packages }}"
+  vars:
+    packages:
+      - redhat-lsb-core
+
+- name: fix /etc/issue if missing
+  shell: "lsb_release -d | cut -f2 > /etc/issue"
+
+- name: run the installer
+  shell: >
+    yes | bash /tmp/vst-install-rhel.sh -f --nginx no --apache no --phpfpm no \
+    --vsftpd no --proftpd no --exim no --dovecot no --spamassassin no \
+    --clamav no --named yes --iptables no --fail2ban no --mysql no \
+    --postgresql no --remi no --quota no \
+    --hostname {{ vm_hostname }} \
+    --email {{ email }} \
+    --password {{ password }}
+
+
+- name: restart dns server
+  shell: /usr/local/vesta/bin/v-restart-dns
+
+# Pause for 10 seconds
+- pause:
+    seconds: 10
+
+- name: replace default DNS template /usr/local/vesta/data/templates/dns/default.tpl
+  template:
+    src: default.tpl
+    dest: "/usr/local/vesta/data/templates/dns/"
+  become: true
+
+- name: restart dns server
+  shell: /usr/local/vesta/bin/v-restart-dns
+
+# Pause for 10 seconds
+- pause:
+    seconds: 10
+
+- name: delete default example record in DNS server
+  shell: /usr/local/vesta/bin/v-delete-domain admin vesta.example.com
+
+- name: delete temp files
+  file:
+    path: /tmp/vst-install-rhel.sh
+    state: absent
+
+- name: add infra entries
+  shell: |
+    /usr/local/vesta/bin/v-add-dns-domain admin chart 10.247.89.22
+    /usr/local/vesta/bin/v-add-dns-domain admin on-nexus-proxy 10.247.89.60
+    /usr/local/vesta/bin/v-add-dns-domain admin aeenexus 10.247.89.19
+    /usr/local/vesta/bin/v-add-dns-domain admin aeegerrit 10.247.89.25
+    /usr/local/vesta/bin/v-add-dns-domain admin aeenexus3 10.247.89.3
+
+- name: fix hostname in bash prompt issue
+  shell: |
+    sed -i '/^HOSTNAME=/d' /etc/sysconfig/network
+    sleep 10s
+    hostnamectl --transient set-hostname {{ vm_hostname }}
+    sleep 10s
+    /usr/local/vesta/bin/v-update-sys-ip
+
+
+- debug:
+    msg: End of Vesta server installation

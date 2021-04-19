@@ -1,0 +1,47 @@
+---
+
+- debug:
+    msg: start of haproxy/roles/install_haproxy_exporter/tasks/main.yaml
+  run_once: true
+
+- name: add user haproxy_exporter
+  user:
+    name: haproxy_exporter
+    shell: /bin/bash
+    create_home: no
+
+- name: create prometheus directory
+  file:
+      path: /opt/haproxy_exporter
+      state: directory
+      mode: 0755
+
+
+- name: copy haproxy_exporter from nexus
+  unarchive:
+    src: "{{ haproxy_exporter }}"
+    dest: "/opt/haproxy_exporter/"
+    remote_src: True
+    extra_opts: "--strip=1"
+
+- name: Create haproxy_exporter systemd service
+  copy:
+    src: haproxy_exporter.service
+    dest: /etc/systemd/system/haproxy_exporter.service
+    owner: root
+
+- name: restart haproxy_exporter service , in all cases, also issue daemon-reload to pick up config changes
+  systemd:
+    state: restarted
+    daemon_reload: yes
+    name: haproxy_exporter
+    enabled: yes
+
+
+- pause:
+    minutes: 1
+
+- debug:
+    msg: end of haproxy/roles/install_haproxy_exporter/tasks/main.yaml
+  run_once: true
+

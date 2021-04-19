@@ -1,0 +1,81 @@
+---
+- name: Check if /etc/haproxy/haproxy.conf exists
+  stat:
+    path: /etc/haproxy/haproxy.cfg
+  register: haproxy_file
+
+- name: set var haproxy Exist
+  set_fact:
+    haproxy_exists:  "{{ haproxy_file.stat.exists }}"
+- debug: var=haproxy_exists
+
+- name: set hostname
+  shell: |
+    sh -c 'echo {{vm_hostname}} > /etc/hostname;
+    hostname -F /etc/hostname'
+  when: haproxy_exists == false
+
+- name: create host file
+  template:
+    src=hosts.j2
+    dest=/etc/hosts
+  when: haproxy_exists == false
+
+# configure ntp --> chrony
+- name: ensure ntpdate isn't installed
+  package:
+    name: 'ntpdate'
+    state: absent
+
+- name: copy chrony-3.4-1.el7.x86_64.rpm from nexus
+  get_url:
+    url: "http://aeenexus3:8081/repository/platform-hybrid/NTP/chrony-3.4-1.el7.x86_64.rpm"
+    force: yes
+    dest: /tmp/chrony-3.4-1.el7.x86_64.rpm
+  retries: 5
+  delay: 10
+
+- name: install chrony from rpm
+  shell: |
+    cd /tmp
+    rpm -iv chrony-3.4-1.el7.x86_64.rpm
+    rm -f chrony-3.4-1.el7.x86_64.rpm
+
+- name: install chrony.conf
+  template:
+    src: ../../../../common-roles/roles/templates/chrony.conf.j2
+    dest: /etc/chrony.conf
+    owner: root
+    group: root
+    mode: 0644
+
+- name: restart chronyd service , in all cases, also issue daemon-reload to pick up config changes
+  systemd:
+    state: restarted
+    daemon_reload: yes
+    name: chronyd
+    enabled: yes
+
+- name: Sync hwclock
+  command: hwclock -w
+
+
+- name: set resolv.conf ip 1 - "{{resolver.ip1}}"
+  shell: |
+      echo "nameserver {{resolver.ip1}}" >  /etc/resolv.conf
+  when:
+    - resolver.ip1 is defined
+    - haproxy_exists == false
+
+
+- name: set resolv.conf ip 2 - "{{resolver.ip2}}"
+  shell: |
+      echo "nameserver {{ resolver.ip2}}" >> /etc/resolv.conf
+  when:
+    - resolver.ip2 is defined
+    - haproxy_exists == false
+
+- name: Install node_exporter role
+  include_tasks: ../../../../common-roles/roles/node_exporter.yaml
+  when: haproxy_exists == false
+

@@ -1,0 +1,7 @@
+---
+- name: Configure Hybrid Components DNS On Vesta
+  hosts: vesta
+  gather_facts: true
+  remote_user: root
+  roles:
+    - { role: ../roles/dns, when: lab_installation == true }

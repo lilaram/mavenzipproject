@@ -1,0 +1,30 @@
+---
+- name: config elassandra
+  include_tasks: elassandra-config.yaml
+  when:
+    - '"elassandra_DC1_1" in services'
+    - elassandra == false
+
+- name: config elasticsearch
+  include_tasks: elasticsearch-config.yaml
+  when:
+    - '"elasticsearch_1" in services'
+    - elasticsearch == false
+
+- name: config elasticsearch logging
+  include_tasks: elasticsearch_logging-config.yaml
+  when:
+    - '"es_logging_1" in services'
+    - elasticsearch_logging == false
+
+- name: config patroni
+  include_tasks: patroni-config.yaml
+  when:
+    - '"postgres_dop_1" in services'
+    - patroni_dop == false
+
+- name: config rabbitmq
+  include_tasks: rabbitmq-config.yaml
+  when:
+    - '"rabbitmq_dev_node_1" in services'
+    - rabbitmq == false

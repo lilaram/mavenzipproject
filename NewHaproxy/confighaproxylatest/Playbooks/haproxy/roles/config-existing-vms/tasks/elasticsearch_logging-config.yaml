@@ -1,0 +1,25 @@
+---
+- name: Ensures dir exists
+  file: path=/etc/haproxy.d/  state=directory
+
+- name: generate haproxy.cfg file
+  template:
+    src: elastic.cfg.j2
+    dest: "/etc/haproxy.d/elastic_logging.cfg"
+    force: true
+  register: haproxy
+- debug: var=haproxy
+
+- name: generate option file
+  shell: |
+    opt=$(cat /etc/sysconfig/haproxy | awk -F"=" '{print $2}' | tr -d '"')
+    if [[ $opt != *"logging"* ]]; then
+       opt="$opt -f /etc/haproxy.d/elastic_logging.cfg"
+       echo OPTIONS=\""$opt"\" > /etc/sysconfig/haproxy
+    fi
+
+- name: reload/restarted haproxy service
+  systemd:
+    state: restarted
+    name: haproxy
+    enabled: yes

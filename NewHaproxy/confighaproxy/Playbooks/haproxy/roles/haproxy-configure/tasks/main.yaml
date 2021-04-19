@@ -1,0 +1,35 @@
+---
+- name: Ensures dir exists
+  file: path=/etc/haproxy.d/  state=directory
+
+- name: Copy HAProxy configuration in place.
+  copy:
+    src: haproxy.cfg
+    dest: /etc/haproxy/haproxy.cfg
+    mode: 0644
+  when: haproxy_exists == false
+
+- name: start haproxy service
+  systemd:
+    state: restarted
+    name: haproxy
+    enabled: yes
+  when: haproxy_exists == false
+
+- name: Copy rsyslog.conf in place.
+  copy:
+    src: rsyslog.conf
+    dest: /etc/rsyslog.conf
+    mode: 0644
+  when: haproxy_exists == false
+
+- name: start rsyslog restart service
+  systemd:
+    state: restarted
+    name: rsyslog
+    enabled: yes
+  when: haproxy_exists == false
+
+- name: touch initFile - first time install /tmp/initFile
+  shell: |
+    touch /tmp/initFile

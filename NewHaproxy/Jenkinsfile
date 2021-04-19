@@ -1,0 +1,127 @@
+@Library('DevOps') _
+
+pipeline {
+    agent {
+        kubernetes {
+            label "${podYaml.label()}"
+            defaultContainer 'maven'
+            yaml podYaml(name: 'build')
+        }
+    }
+    options {
+        disableConcurrentBuilds()
+        buildDiscarder(logRotator(numToKeepStr: '25', daysToKeepStr: '30', artifactDaysToKeepStr: '7', artifactNumToKeepStr: '5'))
+    }
+    environment {
+        BUILD_ID = "${buildUtilities.getBuildId()}"
+        POM_VERSION = "${buildUtilities.getPOMVersion()}"
+    }
+    stages {
+        stage('Review') {
+            agent {
+                kubernetes {
+                    label "${podYaml.label()}"
+                    defaultContainer 'maven'
+                    yaml podYaml(name: 'build')
+                }
+            }
+            when { changeRequest() }
+            steps {
+                gerritReview label: 'Build', message: "Build started"
+                withMaven(
+                        mavenOpts: '-Xms1024m -Xmx2048m -XX:-UseGCOverheadLimit -XX:+TieredCompilation -XX:TieredStopAtLevel=1',
+                        globalMavenSettingsConfig: 'oss-global-settings',
+                        mavenSettingsConfig: 'oss-local-settings',
+                        options: [
+                                artifactsPublisher(disabled: true),
+                                findbugsPublisher(disabled: true),
+                                openTasksPublisher(disabled: true)
+                        ]
+                ) {
+                    sh "mvn install -DskipTests=false"
+                }
+            }
+            post {
+                success { gerritReview score: 1, message: "${BUILD_URL}" }
+                unsuccessful { gerritReview score: -1, message: "${BUILD_URL}" }
+            }
+        }
+        stage('Skip build'){
+            when{ allOf {
+                    branch 'develop'
+                    changelog '^(push-job)$'
+                    //changeRequest author: "jenkins"
+                }
+            }
+            steps{
+             script {
+              currentBuild.result = 'ABORTED'
+              error('This is a remote push. Aborting the build.â€¦')
+             }
+            }
+        }
+        stage('Build') {
+            when { branch 'develop' }
+                    steps {
+                        withMaven(
+                                globalMavenSettingsConfig: 'oss-global-settings',
+                                mavenSettingsConfig: 'oss-main-snapshot',
+                                mavenOpts: '-Xms1024m -Xmx2048m -XX:-UseGCOverheadLimit -XX:+TieredCompilation -XX:TieredStopAtLevel=1',
+                                options: [
+                                        artifactsPublisher(disabled: true),
+                                        findbugsPublisher(disabled: true),
+                                        openTasksPublisher(disabled: true)
+                                ]
+                        ) {
+                            sh "mvn clean deploy"
+                        }
+                    }
+                }
+				
+
+        
+        stage('Release artifacts') {
+            when { branch 'master' }
+            steps {
+                withMaven(
+                        globalMavenSettingsConfig: 'oss-global-settings',
+                        mavenSettingsConfig: 'oss-main-release',
+                        mavenOpts: '-Xms1024m -Xmx2048m -XX:-UseGCOverheadLimit -XX:+TieredCompilation -XX:TieredStopAtLevel=1',
+                        options: [
+                                artifactsPublisher(disabled: true),
+                                findbugsPublisher(disabled: true),
+                                openTasksPublisher(disabled: true)
+                        ]
+                ) {
+                    sh "mvn clean deploy"
+                }
+            }
+        }
+//        stage('Continue yes or no ') {
+//            input {
+//                  message "Should we continue "
+//                  ok "Yes we should."
+//            }
+//            steps {
+//                echo "you agreed to continue ..."
+//            }
+//        }
+
+//        stage('Create Haproxy VM for testing ') {
+//            steps {
+//                sh 'echo starting create the vm for testing... ; pwd'
+//                sh 'cd vm_operation/Playbooks/vm_operation/ansible; pwd;ls ;   ansible-playbook haproxy-vms.yaml; '
+//                sh 'echo done ; cd ../..'
+//                sh 'cd haproxy/scripts; bash -x ./deploy-cluster-haproxy.sh'
+//            }
+//        }
+    }
+     post {
+        success {
+             echo "TODO: put tag"
+         }
+          always {
+            recordIssues enabledForFailure: false, tools: [mavenConsole(), java(), javaDoc()]
+         }
+       }
+}

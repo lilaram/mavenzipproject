@@ -1,0 +1,22 @@
+---
+
+- name: delete current entries
+  shell: |
+    for i in $(/usr/local/vesta/bin/v-list-dns-domains admin | awk '{print $1}' | tail -n +3); do
+        /usr/local/vesta/bin/v-delete-dns-domain admin $i
+        echo $i
+    done
+
+- name: add infra entries
+  shell: |
+    /usr/local/vesta/bin/v-add-dns-domain admin chart 10.247.89.22
+    /usr/local/vesta/bin/v-add-dns-domain admin aeenexus3 10.247.89.3
+    /usr/local/vesta/bin/v-add-dns-domain admin aeenexus 10.247.89.19
+    /usr/local/vesta/bin/v-add-dns-domain admin aeegerrit 10.247.89.25
+
+- name: loop over the hybrid components
+  shell: |
+    if [[ {{ item.value.short }} != "haproxy" ]]; then
+        /usr/local/vesta/bin/v-add-dns-domain admin {{ item.value.host }}.{{ domain_name }} {{ item.value.ip }}
+    fi
+  with_dict: "{{ services }}"

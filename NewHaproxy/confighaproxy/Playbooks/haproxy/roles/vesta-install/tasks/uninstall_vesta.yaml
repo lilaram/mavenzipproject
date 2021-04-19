@@ -1,0 +1,14 @@
+---
+- debug:
+    msg: Start of Vesta server removing
+
+- name: Stop service vesta, if started
+  service:
+    name: vesta
+    state: stopped
+
+- name: remove vesta
+  shell: |
+    yum remove vesta*
+    rm -f /etc/yum.repos.d/vesta.repo
+    rm -rf /usr/local/vesta

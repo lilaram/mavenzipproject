@@ -1,0 +1,33 @@
+frontend elassandra-elastic-northboand-9200
+    bind *:9200
+    mode tcp
+    option tcplog
+    default_backend elassandra-elastic-backend-9200
+
+backend elassandra-elastic-backend-9200
+     mode tcp
+     #option tcp-check connect
+     balance roundrobin
+     {% for key in services %}
+     {% if "elassandra" in key %}
+     server {{ services[key]['host'] }} {{ services[key]['ip'] }}:9200 check
+     {% endif %}
+     {% endfor %}
+
+### Optional
+frontend elassandra-northboand-9042
+    bind *:9042
+    mode tcp
+    option tcplog
+    default_backend elassandra-backend-9042
+
+backend elassandra-backend-9042
+     mode tcp
+     #option tcp-check connect
+     balance roundrobin
+{% for key in services %}
+   {% if "elassandra" in key %}
+     server {{ services[key]['host'] }} {{ services[key]['ip'] }}:9200 check
+   {% endif %}
+{% endfor %}
+

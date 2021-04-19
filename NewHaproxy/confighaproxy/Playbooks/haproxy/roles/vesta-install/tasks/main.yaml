@@ -1,0 +1,23 @@
+---
+- name: initialize service facts
+  service_facts:
+
+- name: set fact vesta exist
+  set_fact:
+    vesta_not_exist: false
+  when: ansible_facts.services["vesta"] is defined
+
+- name: set fact vesta not exist
+  set_fact:
+    vesta_not_exist: true
+  when: ansible_facts.services["vesta"] is undefined
+
+- debug:
+    var: ansible_facts.services["vesta"]
+
+- debug:
+    var: vesta_not_exist
+
+- name: install vesta
+  include_tasks: install_vesta.yaml
+  when: vesta_not_exist

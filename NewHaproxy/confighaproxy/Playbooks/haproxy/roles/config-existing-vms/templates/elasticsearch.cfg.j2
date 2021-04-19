@@ -1,0 +1,17 @@
+frontend elasticsearch-northboand-9200
+    bind *:9200
+    mode tcp
+    option tcplog
+    default_backend elasticsearch-backend-9200
+
+backend elasticsearch-backend-9200
+     mode tcp
+     option tcp-check connect
+     balance roundrobin
+{% for key in services %}
+    {% if "elasticsearch" in key %}
+     server {{ services[key]['host'] }} {{ services[key]['ip'] }}:9200 check
+    {% endif %}
+{% endfor %}
+
+

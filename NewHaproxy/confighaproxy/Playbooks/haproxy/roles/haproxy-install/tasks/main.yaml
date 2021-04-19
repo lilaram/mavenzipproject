@@ -1,0 +1,16 @@
+---
+- name: copy haproxy-1.5.18-7.el7.x86_64.rpm from nexus
+  get_url:
+    url: "{{ haproxy_rpm }}"
+    force: yes
+    dest: /tmp/haproxy-1.5.18-7.el7.x86_64.rpm
+  retries: 5
+  delay: 10
+  when: haproxy_exists == false
+
+- name: install haproxy-1.5.18-7.el7.x86_64.rpm
+  shell: |
+    cd /tmp
+    rpm -iv haproxy-1.5.18-7.el7.x86_64.rpm
+  when: haproxy_exists == false
+

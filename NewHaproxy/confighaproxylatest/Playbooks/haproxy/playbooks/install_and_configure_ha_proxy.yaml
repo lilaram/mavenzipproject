@@ -1,0 +1,23 @@
+---
+# Install and configure haproxy
+- name: Install and Configure HAproxy
+  hosts: haproxy
+  gather_facts: true
+  remote_user: root
+  roles:
+    - ../roles/generic
+    - ../roles/haproxy-install
+    - ../roles/haproxy-configure
+    - { role: ../roles/install-haproxy-exporter, when: haproxy_not_exist == true}
+    - { role: ../roles/config-existing-vms, when: haproxy_not_exist == true}
+
+# Install and configure vesta
+- name: Install and Configure Vesta
+  hosts: vesta
+  gather_facts: true
+  remote_user: root
+  roles:
+    - { role: ../roles/vesta-install, when: lab_installation == true }
+
+
+

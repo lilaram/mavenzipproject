@@ -1,0 +1,51 @@
+---
+- name: copy haproxy-2.3.4-1.el7.x86_64.rpm from nexus
+  get_url:
+    url: "{{ haproxy_rpm }}"
+    force: yes
+    dest: /tmp/haproxy-2.3.4-1.el7.x86_64.rpm
+  retries: 5
+  delay: 10
+  when: haproxy_exists == false
+
+- name: Create /var/lib/haproxy/ directory if it does not exist
+  ansible.builtin.file:
+    path: /var/lib/haproxy/
+    state: directory
+    mode: '0755'
+
+- name: create /var/lib/haproxy/stats
+  file:
+    path: "/var/lib/haproxy/stats"
+    state: touch
+
+- name: update rsyslog
+  yum:
+    name: rsyslog
+    state: latest
+
+- name: install haproxy-2.3.4-1.el7.x86_64.rpm
+  yum:
+    name: /tmp/haproxy-2.3.4-1.el7.x86_64.rpm
+    state: present
+  when: haproxy_exists == false
+
+- name: create haproxy service
+  template:
+    src: haproxy.service
+    dest: /usr/lib/systemd/system/haproxy.service
+    owner: root
+    group: root
+    mode: 0644
+    force: true
+
+- name: stop haproxy service, also issue daemon-reload to pick up config changes
+  systemd:
+    state: stopped
+    daemon_reload: yes
+    name: haproxy
+
+- name: delete /tmp/haproxy-2.3.4-1.el7.x86_64.rpm
+  file:
+    path: /tmp/haproxy-2.3.4-1.el7.x86_64.rpm
+    state: absent

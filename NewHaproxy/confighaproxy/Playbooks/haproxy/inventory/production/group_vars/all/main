@@ -1,0 +1,18 @@
+haproxy_user: haproxy
+haproxy_group: haproxy
+
+# Backend settings.
+haproxy_backend_name: 'habackend'
+haproxy_backend_mode: 'http'
+haproxy_backend_balance_method: 'roundrobin'
+haproxy_backend_httpchk: 'HEAD / HTTP/1.1\r\nHost:localhost'
+
+
+haproxy_rpm: "http://on-nexus-proxy:8081/repository/raw.group/haproxy/haproxy-1.5.18-8.el7.x86_64.rpm"
+java_jre: "http://on-nexus-proxy:8081/repository/raw.group/jre/jre-8u181-linux-x64.rpm"
+node_exporter: "http://on-nexus-proxy:8081/repository/raw.group/node-exporter/node_exporter-1.0.0.linux-amd64.tar.gz"
+haproxy_exporter: "http://on-nexus-proxy:8081/repository/raw.group/node-exporter/haproxy_exporter-0.10.0.linux-amd64.tar.gz"
+
+
+
+

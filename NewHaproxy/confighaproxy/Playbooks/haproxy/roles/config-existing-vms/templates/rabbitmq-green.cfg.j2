@@ -1,0 +1,41 @@
+######
+### Northbound listen on 5671 (green) >>>  rabbit 5671
+#####
+
+frontend rabbit-green-northboand-5671
+    bind *:5671
+    mode tcp
+    option tcplog
+    default_backend rabbit-green-backend-5671
+
+backend rabbit-green-backend-5671
+     mode tcp
+     option tcp-check connect
+     option tcplog
+     balance roundrobin
+{% for key in services %}
+    {% if "rabbitmq" in key %}
+     server {{ services[key]['host'] }} {{ services[key]['ip'] }}:5671 check
+    {% endif %}
+{% endfor %}
+
+
+
+frontend rabbit-green-northboand-15672
+    bind *:15672
+    mode tcp
+    option tcplog
+    default_backend rabbit-green-backend-15672
+
+backend rabbit-green-backend-15672
+     mode tcp
+     option tcp-check connect
+     option tcplog
+     balance roundrobin
+{% for key in services %}
+    {% if "rabbitmq" in key %}
+     server {{ services[key]['host'] }} {{ services[key]['ip'] }}:15672 check
+    {% endif %}
+{% endfor %}
+
+

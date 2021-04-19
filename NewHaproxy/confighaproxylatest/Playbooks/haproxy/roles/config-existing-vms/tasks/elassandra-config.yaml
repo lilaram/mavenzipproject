@@ -1,0 +1,26 @@
+---
+
+- name: Ensures dir exists
+  file: path=/etc/haproxy.d/  state=directory
+
+- name: generate haproxy.cfg file for  elassandra
+  template:
+    src: elassandra.cfg.j2
+    dest: "/etc/haproxy.d/elassandra.cfg"
+    force: true
+  register: haproxy
+- debug: var=haproxy
+
+- name: generate option file for elassandra
+  shell: |
+    opt=$(cat /etc/sysconfig/haproxy | awk -F"=" '{print $2}' | tr -d '"')
+    if [[ $opt != *"elassandra"* ]]; then
+       opt="$opt -f /etc/haproxy.d/elassandra.cfg"
+       echo OPTIONS=\""$opt"\" > /etc/sysconfig/haproxy
+    fi
+
+- name: reload/restarted haproxy service
+  systemd:
+    state: restarted
+    name: haproxy
+    enabled: yes
